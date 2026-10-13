@@ -88,8 +88,8 @@ function Expenses({ accounts, accountName }: { accounts: Account[]; accountName:
           Add expense
         </Button>
       </div>
-      {error && <p className="text-sm text-red-500">Failed to load: {error.message}</p>}
-      {remove.error && <p className="text-sm text-red-500">Delete failed: {remove.error.message}</p>}
+      {error && <p className="text-sm text-destructive">Failed to load: {error.message}</p>}
+      {remove.error && <p className="text-sm text-destructive">Delete failed: {remove.error.message}</p>}
       <Card>
         <CardContent>
           <DataTable columns={columns} data={expenses} initialSorting={[{ id: 'incurred_on', desc: true }]} empty="No expenses yet." />
@@ -184,8 +184,8 @@ function Payouts({ accounts, accountName }: { accounts: Account[]; accountName: 
         </Button>
       </div>
       {!hasAccounts && <p className="text-sm text-muted-foreground">Create an account first; every payout belongs to one.</p>}
-      {error && <p className="text-sm text-red-500">Failed to load: {error.message}</p>}
-      {remove.error && <p className="text-sm text-red-500">Delete failed: {remove.error.message}</p>}
+      {error && <p className="text-sm text-destructive">Failed to load: {error.message}</p>}
+      {remove.error && <p className="text-sm text-destructive">Delete failed: {remove.error.message}</p>}
       <Card>
         <CardContent>
           <DataTable columns={columns} data={payouts} initialSorting={[{ id: 'paid_on', desc: true }]} empty="No payouts yet." />
@@ -229,7 +229,7 @@ export function Ledger() {
 
   return (
     <div className="grid gap-4">
-      <h1 className="text-xl font-semibold">Ledger</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Ledger</h1>
       <Tabs defaultValue="expenses">
         <TabsList>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>

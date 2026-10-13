@@ -111,7 +111,7 @@ export function ComplianceView({ accounts, trades, payouts }: { accounts: Accoun
   const live = accounts.filter((account) => account.status === 'active' && account.account_type !== 'blown')
   return (
     <div className="grid gap-4">
-      <h1 className="text-xl font-semibold">Compliance</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Compliance</h1>
       {live.length === 0 && (
         <Card>
           <CardContent className="text-sm text-muted-foreground">No active accounts to track.</CardContent>
@@ -137,7 +137,7 @@ export function Compliance() {
   const payouts = usePayouts()
   const error = accounts.error ?? trades.error ?? payouts.error
 
-  if (error) return <p className="text-sm text-red-500">Failed to load: {error.message}</p>
+  if (error) return <p className="text-sm text-destructive">Failed to load: {error.message}</p>
   if (!accounts.data || !trades.data || !payouts.data) return <p className="text-sm text-muted-foreground">Loading…</p>
   return <ComplianceView accounts={accounts.data} trades={trades.data} payouts={payouts.data} />
 }

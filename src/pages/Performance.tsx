@@ -1,18 +1,20 @@
 import { useMemo, useState } from 'react'
 import { DataTable, type DataColumn } from '@/components/DataTable'
 import { NativeSelect } from '@/components/FormDialog'
+import { PnlCalendar } from '@/components/PnlCalendar'
 import { CategoryPnlBars, DailyPnlBars, EquityCurve } from '@/components/PnlCharts'
+import { ReviewPanel } from '@/components/ReviewPanel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { averageHold, byEntryHour, byHoldTime, byWeekday, type Bucket } from '@/lib/breakdowns'
 import { formatDuration, formatPct, formatUsd } from '@/lib/format'
-import { dailySeries, summarizePerformance, type DayPoint, type PerformanceSummary } from '@/lib/performance'
+import { dailySeries, summarizePerformance, type PerformanceSummary } from '@/lib/performance'
 import { useAccounts, useTrades } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 import type { Account, Trade } from '@/types/domain'
 
 const RIGHT = { className: 'text-right tabular-nums' }
-const pnlColor = (value: number | null) => (value === null || value === 0 ? undefined : value > 0 ? 'text-emerald-500' : 'text-red-500')
+const pnlColor = (value: number | null) => (value === null || value === 0 ? undefined : value > 0 ? 'text-primary' : 'text-destructive')
 const usd = (value: number | null) => (value === null ? '—' : formatUsd(value))
 
 function Tile({ label, value, detail, className }: { label: string; value: string; detail?: string; className?: string }) {
@@ -87,18 +89,6 @@ const ACCOUNT_COLUMNS: DataColumn<AccountRow>[] = [
   },
 ]
 
-const DAY_COLUMNS: DataColumn<DayPoint>[] = [
-  { accessorKey: 'date', header: 'Trading day' },
-  { accessorKey: 'trades', header: 'Trades', meta: RIGHT },
-  {
-    accessorKey: 'netPnl',
-    header: 'Net P&L',
-    meta: RIGHT,
-    cell: ({ row }) => <span className={pnlColor(row.original.netPnl)}>{formatUsd(row.original.netPnl)}</span>,
-  },
-  { accessorKey: 'cumulative', header: 'Cumulative', meta: RIGHT, enableSorting: false, cell: ({ row }) => formatUsd(row.original.cumulative) },
-]
-
 // Trading performance for one account or all of them, from imported trades.
 export function PerformanceView({ accounts, trades }: { accounts: Account[]; trades: Trade[] }) {
   const [filter, setFilter] = useState('')
@@ -114,12 +104,13 @@ export function PerformanceView({ accounts, trades }: { accounts: Account[]; tra
         .filter((row) => row.tradeCount > 0),
     [accounts, trades],
   )
-  const scope = accounts.find((account) => account.id === filter)?.label ?? 'all accounts'
+  const selectedAccount = accounts.find((account) => account.id === filter) ?? null
+  const scope = selectedAccount?.label ?? 'all accounts'
 
   return (
     <div className="grid gap-4">
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold">Performance</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Performance</h1>
         <NativeSelect aria-label="Account" className="ml-auto w-56" value={filter} onChange={(event) => setFilter(event.target.value)}>
           <option value="">All accounts</option>
           {accounts.map((account) => (
@@ -148,6 +139,8 @@ export function PerformanceView({ accounts, trades }: { accounts: Account[]; tra
             <Tile label="Best / worst day" value={`${usd(summary.bestDay)} / ${usd(summary.worstDay)}`} />
           </div>
 
+          <ReviewPanel account={selectedAccount} accounts={selectedAccount ? [selectedAccount] : accounts} trades={visible} />
+
           <div className="grid gap-4 xl:grid-cols-2">
             <Card>
               <CardHeader>
@@ -166,6 +159,15 @@ export function PerformanceView({ accounts, trades }: { accounts: Account[]; tra
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Daily P&L calendar, {scope}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PnlCalendar days={days} />
+            </CardContent>
+          </Card>
 
           <div className="grid items-start gap-4 xl:grid-cols-3">
             <Breakdown
@@ -186,15 +188,6 @@ export function PerformanceView({ accounts, trades }: { accounts: Account[]; tra
               <DataTable columns={ACCOUNT_COLUMNS} data={byAccount} initialSorting={[{ id: 'netPnl', desc: true }]} empty="No trades yet." />
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">By trading day, {scope}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DataTable columns={DAY_COLUMNS} data={days} initialSorting={[{ id: 'date', desc: true }]} empty="No trades yet." pageSize={20} />
-            </CardContent>
-          </Card>
         </>
       )}
     </div>
@@ -206,7 +199,7 @@ export function Performance() {
   const trades = useTrades()
   const error = accounts.error ?? trades.error
 
-  if (error) return <p className="text-sm text-red-500">Failed to load: {error.message}</p>
+  if (error) return <p className="text-sm text-destructive">Failed to load: {error.message}</p>
   if (!accounts.data || !trades.data) return <p className="text-sm text-muted-foreground">Loading…</p>
   return <PerformanceView accounts={accounts.data} trades={trades.data} />
 }

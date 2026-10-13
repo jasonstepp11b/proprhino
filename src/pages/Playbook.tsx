@@ -17,7 +17,7 @@ const COPY: Record<TagKind, { title: string; chart: string; placeholder: string;
   mistake: { title: 'Mistakes', chart: 'Net P&L of trades tagged with each mistake', placeholder: 'New mistake, e.g. FOMO Entry', empty: 'No mistakes yet.' },
 }
 
-const pnlColor = (value: number) => (value > 0 ? 'text-emerald-500' : value < 0 ? 'text-red-500' : undefined)
+const pnlColor = (value: number) => (value > 0 ? 'text-primary' : value < 0 ? 'text-destructive' : undefined)
 
 // Postgres unique-violation code, raised when the name is already taken.
 function friendly(error: unknown): Error {
@@ -106,8 +106,8 @@ function TagSection({ kind, summaries }: { kind: TagKind; summaries: TagSummary[
             Add
           </Button>
         </form>
-        {addError && <p className="text-sm text-red-500">{addError}</p>}
-        {remove.error && <p className="text-sm text-red-500">Delete failed: {remove.error.message}</p>}
+        {addError && <p className="text-sm text-destructive">{addError}</p>}
+        {remove.error && <p className="text-sm text-destructive">Delete failed: {remove.error.message}</p>}
       </CardContent>
 
       <FormDialog
@@ -137,14 +137,14 @@ export function Playbook() {
   const trades = useTrades()
   const error = tags.error ?? tradeTags.error ?? trades.error
 
-  if (error) return <p className="text-sm text-red-500">Failed to load: {error.message}</p>
+  if (error) return <p className="text-sm text-destructive">Failed to load: {error.message}</p>
   if (!tags.data || !tradeTags.data || !trades.data) return <p className="text-sm text-muted-foreground">Loading…</p>
 
   const summaries = summarizeTags(tags.data, tradeTags.data, trades.data)
   return (
     <div className="grid gap-4">
       <div>
-        <h1 className="text-xl font-semibold">Playbook</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Playbook</h1>
         <p className="text-sm text-muted-foreground">Create setups and mistakes here, then apply them to trades on the Trades page by ticking rows.</p>
       </div>
       <div className="grid items-start gap-4 xl:grid-cols-2">

@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import { PLATFORM_LABELS, TAG_KIND_LABELS, type Account, type Tag, type TagKind, type Trade } from '@/types/domain'
 
 const RIGHT = { className: 'text-right tabular-nums' }
-const pnlColor = (value: number) => (value > 0 ? 'text-emerald-500' : value < 0 ? 'text-red-500' : undefined)
+const pnlColor = (value: number) => (value > 0 ? 'text-primary' : value < 0 ? 'text-destructive' : undefined)
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
 const formatTime = (iso: string) => new Date(iso).toLocaleString('en-US', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })
 
@@ -139,10 +139,10 @@ function ImportCard({ accounts }: { accounts: Account[] }) {
               <Stat label="Net P&L" value={formatUsd(net)} className={pnlColor(net)} />
             </div>
             {preview.platform === 'tradovate' && noRates && (
-              <p className="text-amber-500">This account has no commission rates set, so net P&L will equal gross. Set them on the Accounts page before importing.</p>
+              <p className="text-chart-2">This account has no commission rates set, so net P&L will equal gross. Set them on the Accounts page before importing.</p>
             )}
             {preview.errors.length > 0 && (
-              <div className="text-red-500">
+              <div className="text-destructive">
                 {preview.errors.length} row{preview.errors.length === 1 ? '' : 's'} could not be read and will be skipped:
                 <ul className="list-disc pl-5">
                   {preview.errors.slice(0, 5).map((error) => (
@@ -164,7 +164,7 @@ function ImportCard({ accounts }: { accounts: Account[] }) {
             </div>
           </div>
         )}
-        {message && <p className={cn('text-sm', message.error ? 'text-red-500' : 'text-emerald-500')}>{message.text}</p>}
+        {message && <p className={cn('text-sm', message.error ? 'text-destructive' : 'text-primary')}>{message.text}</p>}
       </CardContent>
     </Card>
   )
@@ -183,6 +183,7 @@ export function Trades() {
   const [tagFilter, setTagFilter] = useState('')
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [bulkTagId, setBulkTagId] = useState('')
+  const [showAllImports, setShowAllImports] = useState(false)
 
   const accountLabel = useMemo(() => {
     const labels = new Map(accounts.map((account) => [account.id, account.label]))
@@ -287,18 +288,23 @@ export function Trades() {
 
   return (
     <div className="grid gap-4">
-      <h1 className="text-xl font-semibold">Trades</h1>
-      {error && <p className="text-sm text-red-500">Failed to load: {error.message}</p>}
+      <h1 className="text-2xl font-semibold tracking-tight">Trades</h1>
+      {error && <p className="text-sm text-destructive">Failed to load: {error.message}</p>}
       <ImportCard accounts={activeAccounts} />
 
       {batches.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Imports</CardTitle>
+          <CardHeader className="flex flex-row items-center gap-3">
+            <CardTitle className="text-sm">{showAllImports ? `Imports (${batches.length})` : 'Latest import'}</CardTitle>
+            {batches.length > 1 && (
+              <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setShowAllImports(!showAllImports)}>
+                {showAllImports ? 'Show latest only' : `Show all ${batches.length} imports`}
+              </Button>
+            )}
           </CardHeader>
-          <CardContent className="grid gap-1 text-sm">
-            {deleteBatch.error && <p className="text-red-500">Delete failed: {deleteBatch.error.message}</p>}
-            {batches.map((batch) => (
+          <CardContent className="grid max-h-72 gap-1 overflow-y-auto text-sm">
+            {deleteBatch.error && <p className="text-destructive">Delete failed: {deleteBatch.error.message}</p>}
+            {(showAllImports ? batches : batches.slice(0, 1)).map((batch) => (
               <div key={batch.id} className="flex items-center gap-3">
                 <span className="font-medium">{batch.filename}</span>
                 <span className="text-muted-foreground">
@@ -377,7 +383,7 @@ export function Trades() {
               <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setSelected(new Set())}>
                 Clear selection
               </Button>
-              {tagTrades.error && <span className="basis-full text-red-500">Tagging failed: {tagTrades.error.message}</span>}
+              {tagTrades.error && <span className="basis-full text-destructive">Tagging failed: {tagTrades.error.message}</span>}
             </div>
           )}
           <SelectionContext value={selection}>

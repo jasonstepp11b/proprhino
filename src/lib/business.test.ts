@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { Tag } from '@/types/domain'
+import type { Account, Payout, Tag, Trade } from '@/types/domain'
+import { isWeekend, monthLabel, monthWeeks, shiftMonth } from './calendar'
 import { averageHold, byEntryHour, byHoldTime, byWeekday } from './breakdowns'
 import { formatDuration } from './format'
 import { dailySeries, summarizePerformance } from './performance'
 import { summarizeBusiness, summarizeByFirm } from './pnl'
+import { buildReviewStats } from './review'
 import { summarizeTags } from './tags'
 import { checkConsistency, checkTradingDays, cycleStart, tradesInCycle } from './rules'
 
@@ -178,5 +180,62 @@ describe('breakdowns', () => {
 
   it('formats durations', () => {
     expect([45_000, 192_000, 7_041_000].map(formatDuration)).toEqual(['45s', '3m 12s', '1h 57m'])
+  })
+})
+
+describe('buildReviewStats', () => {
+  const trade = (id: string, day: string, net: number) =>
+    ({ id, account_id: 'a', trade_date: day, entry_time: `${day}T14:00:00Z`, exit_time: `${day}T14:05:00Z`, symbol: 'MNQ', direction: 'long', quantity: 2, gross_pnl: net + 4, commission: 4, net_pnl: net }) as Trade
+  const account = { id: 'a', label: 'Eval 1', firm_name: 'BluSky', account_type: 'evaluation', account_size: 100000, consistency_pct: 50, min_trading_days: 5 } as Account
+
+  it('summarizes the scope with rule status and tags', () => {
+    const stats = buildReviewStats({
+      scope: 'Eval 1',
+      accounts: [account],
+      trades: [trade('t1', '2026-10-06', 300), trade('t2', '2026-10-07', -100), trade('t3', '2026-10-08', 200)],
+      payouts: [{ account_id: 'a', paid_on: '2026-10-06' }] as Payout[],
+      tags: [{ id: 'm', kind: 'mistake', name: 'FOMO Entry' }] as Tag[],
+      tradeTags: [{ trade_id: 't2', tag_id: 'm' }],
+    })
+    expect(stats.summary).toMatchObject({ tradeCount: 3, netPnl: 400, winRatePct: 66.67, untaggedTrades: 2, avgHoldSecondsWinners: 300 })
+    expect(stats.accounts[0]).toMatchObject({
+      label: 'Eval 1',
+      rulesCountedSince: '2026-10-06',
+      consistency: { limitPct: 50, bestDayProfit: 200, bestDayPctOfProfit: 200, withinLimit: false, profitNeededToComply: 300 },
+      minimumTradingDays: { completed: 2, required: 5 },
+    })
+    expect(stats.tags).toEqual([{ kind: 'mistake', name: 'FOMO Entry', trades: 1, winRatePct: 0, netPnl: -100 }])
+    expect(stats.recentTrades[1]).toMatchObject({ tradingDay: '2026-10-07', enteredEastern: '10/07, 10:00', holdSeconds: 300, tags: ['mistake: FOMO Entry'] })
+  })
+
+  it('caps the recent trades it sends', () => {
+    const trades = Array.from({ length: 400 }, (_, index) => trade(`t${index}`, '2026-10-06', 10))
+    const stats = buildReviewStats({ scope: 'All accounts', accounts: [], trades, payouts: [], tags: [], tradeTags: [] })
+    expect(stats.summary.tradeCount).toBe(400)
+    expect(stats.recentTrades).toHaveLength(150)
+  })
+})
+
+describe('calendar', () => {
+  it('lays out a month as Monday-first weekday weeks', () => {
+    // October 2026 starts on a Thursday and ends on a Saturday.
+    const weeks = monthWeeks('2026-10', false)
+    expect(weeks[0]).toEqual([null, null, null, '2026-10-01', '2026-10-02'])
+    expect(weeks[1][0]).toBe('2026-10-05')
+    expect(weeks.at(-1)).toEqual(['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30'])
+    expect(weeks).toHaveLength(5)
+  })
+
+  it('drops weeks that only contain a hidden weekend', () => {
+    // August 2026 starts on a Saturday.
+    expect(monthWeeks('2026-08', false)[0][0]).toBe('2026-08-03')
+    expect(monthWeeks('2026-08', true)[0]).toEqual([null, null, null, null, null, '2026-08-01', '2026-08-02'])
+  })
+
+  it('shifts and labels months across year ends', () => {
+    expect(shiftMonth('2026-12', 1)).toBe('2027-01')
+    expect(shiftMonth('2026-01', -1)).toBe('2025-12')
+    expect(monthLabel('2026-10')).toBe('October 2026')
+    expect([isWeekend('2026-10-10'), isWeekend('2026-10-11'), isWeekend('2026-10-12')]).toEqual([true, true, false])
   })
 })

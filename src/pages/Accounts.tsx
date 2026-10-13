@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { number, optionalNumber, text } from '@/lib/form'
 import { formatUsd } from '@/lib/format'
-import { useAccounts, useSaveRow } from '@/lib/queries'
+import { useAccounts, useDeleteAccount, useExpenses, usePayouts, useSaveRow, useTrades } from '@/lib/queries'
 import { ACCOUNT_TYPE_LABELS, PLATFORM_LABELS, type Account, type AccountType, type Platform } from '@/types/domain'
 
 const TYPE_BADGE: Record<AccountType, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -23,15 +23,30 @@ type Editing = Account | 'new' | null
 export function Accounts() {
   const { data: accounts, error, isPending } = useAccounts()
   const save = useSaveRow<Account>('accounts')
+  const remove = useDeleteAccount()
+  const { data: trades } = useTrades()
+  const { data: expenses } = useExpenses()
+  const { data: payouts } = usePayouts()
   const [editing, setEditing] = useState<Editing>(null)
   const [showArchived, setShowArchived] = useState(false)
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading…</p>
-  if (error) return <p className="text-sm text-red-500">Failed to load: {error.message}</p>
+  if (error) return <p className="text-sm text-destructive">Failed to load: {error.message}</p>
 
   const account = editing === 'new' ? null : editing
   const visible = accounts.filter((row) => showArchived || row.status === 'active')
   const archivedCount = accounts.filter((row) => row.status === 'archived').length
+
+  // Spells out what goes with the account before anything is removed.
+  function handleDelete(row: Account) {
+    if (!trades || !expenses || !payouts) return
+    const count = (rows: { account_id: string | null }[], noun: string) => {
+      const total = rows.filter((item) => item.account_id === row.id).length
+      return `${total} ${noun}${total === 1 ? '' : 's'}`
+    }
+    const message = `Permanently delete "${row.label}"?\n\nThis also deletes its ${count(trades, 'trade')}, ${count(expenses, 'expense')} and ${count(payouts, 'payout')}. It cannot be undone.`
+    if (window.confirm(message)) remove.mutate(row.id)
+  }
 
   async function handleSubmit(data: FormData) {
     await save.mutateAsync({
@@ -53,7 +68,7 @@ export function Accounts() {
   return (
     <div className="grid gap-4">
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold">Accounts</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
         {archivedCount > 0 && (
           <Button variant="ghost" size="sm" onClick={() => setShowArchived(!showArchived)}>
             {showArchived ? 'Hide archived' : `Show archived (${archivedCount})`}
@@ -63,6 +78,7 @@ export function Accounts() {
           New account
         </Button>
       </div>
+      {remove.error && <p className="text-sm text-destructive">Delete failed: {remove.error.message}</p>}
       <Card>
         <CardContent>
           <Table>
@@ -112,6 +128,9 @@ export function Accounts() {
                       onClick={() => save.mutate({ id: row.id, values: { status: row.status === 'active' ? 'archived' : 'active' } })}
                     >
                       {row.status === 'active' ? 'Archive' : 'Restore'}
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-destructive" disabled={remove.isPending || !trades || !expenses || !payouts} onClick={() => handleDelete(row)}>
+                      Delete
                     </Button>
                   </TableCell>
                 </TableRow>

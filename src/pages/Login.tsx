@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Brand } from '@/components/Brand'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -30,7 +31,9 @@ export function Login() {
     <div className="flex min-h-svh items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>PropFirm Ledger</CardTitle>
+          <CardTitle>
+            <Brand size={40} className="text-xl" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid gap-4">

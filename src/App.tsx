@@ -9,6 +9,7 @@ import { Ledger } from '@/pages/Ledger'
 import { Login } from '@/pages/Login'
 import { Performance } from '@/pages/Performance'
 import { Playbook } from '@/pages/Playbook'
+import { Settings } from '@/pages/Settings'
 import { Trades } from '@/pages/Trades'
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="performance" element={<Performance />} />
           <Route path="compliance" element={<Compliance />} />
           <Route path="playbook" element={<Playbook />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>

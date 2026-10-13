@@ -1,4 +1,4 @@
--- PropFirm Ledger v1.0 schema.
+-- PropRhino v1.0 schema.
 -- Every table carries user_id and is locked down with RLS so a user only ever
 -- sees their own rows. Child tables reference accounts through the composite
 -- (id, user_id) key, so a row can never point at another user's account.
